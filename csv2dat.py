@@ -114,6 +114,41 @@ def test_dbs(opts, args):
 test_dbs.usage = 'test reference.dat test.dat ips.txt'
 
 
+def dev(opts, args):
+    cases = [
+        # 1bit prefix then 2bit prefix (next level)
+        (['128.0.0.0/1', '192.0.0.0/2'],
+            ' 0 [\'--\', 1] 1 ["3 (\'1\',)", "5 (\'2\',)"]'),
+
+        # 1bit prefix then 3bit prefix (two levels down)
+        (['128.0.0.0/1', '160.0.0.0/3'],
+            ' 0 [\'--\', 1] 1 [2, "4 (\'1\',)"] 2 ["4 (\'1\',)", "6 (\'3\',)"]'),
+
+        # 2bit prefix then 3bit prefix (next level)
+        (['128.0.0.0/2', '128.0.0.0/3'],
+            ' 0 [\'--\', 1] 1 [2, \'--\'] 2 ["6 (\'3\',)", "4 (\'2\',)"]'),
+
+        # 2bit prefix then 4bit prefix (two levels down)
+        (['128.0.0.0/2', '144.0.0.0/4'],
+            ' 0 [\'--\', 1] 1 [2, \'--\'] 2 [3, "5 (\'2\',)"] 3 ["5 (\'2\',)", "7 (\'4\',)"]'),
+    ]
+    def do_case(inputs, expected):
+        print('+', inputs, expected)
+        r = ASNRadixTree(debug=True)
+        for snet in inputs:
+            net = ipaddr.IPNetwork(snet)
+            r[net] = (str(net.prefixlen),)
+        dump = ''
+        for node in r.segments:
+            dump += ' ' + str(node.segment) + ' ' + \
+                str([r.dump_node(node.child[0]), r.dump_node(node.child[1])])
+        assert dump == expected
+    for case in cases:
+        do_case(*case)
+    print('PASS')
+dev.usage = ''
+
+
 def gen_csv(f):
     """peek at rows from a csv and start yielding when we get past the comments
     to a row that starts with an int"""
@@ -470,6 +505,7 @@ rtrees = [
 cmds = dict((rtree.cmd, (partial(build_dat, rtree), rtree.usage)) for rtree in rtrees)
 cmds['flat'] = (flatten_city, flatten_city.usage)
 cmds['test'] = (test_dbs, test_dbs.usage)
+cmds['dev'] = (dev, dev.usage)
 
 def main(argv=None):
     global opts
