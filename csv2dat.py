@@ -139,11 +139,10 @@ flatten_city.usage = '-l GeoLiteCity-Location.csv flat GeoLiteCity-Blocks.csv > 
 
 
 class RadixTreeNode(object):
-    __slots__ = ['segment', 'lhs', 'rhs']
+    __slots__ = ['segment', 'child']
     def __init__(self, segment):
         self.segment = segment
-        self.lhs = None
-        self.rhs = None
+        self.child = [None, None]
 
 
 class RadixTree(object):
@@ -160,17 +159,32 @@ class RadixTree(object):
         self.netcount += 1
         inet = int(net)
         node = self.segments[0]
+        if self.debug:
+            print('++', 'add', str(net))
         for depth in range(self.seek_depth, self.seek_depth - (net.prefixlen-1), -1):
-            if inet & (1 << depth):
-                if not node.rhs:
-                    node.rhs = RadixTreeNode(len(self.segments))
-                    self.segments.append(node.rhs)
-                node = node.rhs
-            else:
-                if not node.lhs:
-                    node.lhs = RadixTreeNode(len(self.segments))
-                    self.segments.append(node.lhs)
-                node = node.lhs
+            bit = (inet >> depth) & 1
+            if self.debug:
+                print('level %d direction %d isleaf %d nextdirection %d' %
+                    (31 - depth, bit,
+                    node.child[bit] != None and not isinstance(node.child[bit], RadixTreeNode),
+                    (inet >> (depth - 1)) & 1))
+            if not node.child[bit]: # does not exist
+                node.child[bit] = RadixTreeNode(len(self.segments))
+                self.segments.append(node.child[bit])
+                if self.debug:
+                    print('new node', node.child[bit].segment, '[\'--\', \'--\']')
+            elif not isinstance(node.child[bit], RadixTreeNode): # exists as a leaf
+                new = RadixTreeNode(len(self.segments))
+                self.segments.append(new)
+                next_bit = (inet >> (depth - 1)) & 1
+                new.child[not next_bit] = node.child[bit]
+                if depth > self.seek_depth - (net.prefixlen-2): # allow for new data leaf
+                    new.child[next_bit] = node.child[bit]
+                node.child[bit] = new
+                if self.debug:
+                    print('new node', new.segment,
+                        [self.dump_node(new.child[0]), self.dump_node(new.child[1])])
+            node = node.child[bit]
 
         if not data in self.data_offsets:
             self.data_offsets[data] = self.cur_offset
@@ -178,14 +192,11 @@ class RadixTree(object):
             self.data_segments.append(enc_data)
             self.cur_offset += (len(enc_data))
 
+        last_bit = (inet >> (self.seek_depth - (net.prefixlen-1))) & 1
+        node.child[last_bit] = data
         if self.debug:
-            #store net after data for easier debugging
-            data = data, net
-
-        if inet & (1 << self.seek_depth - (net.prefixlen-1)):
-            node.rhs = data
-        else:
-            node.lhs = data
+            print('attach data to node', node.segment,
+                [self.dump_node(node.child[0]), self.dump_node(node.child[1])])
 
     def gen_nets(self, opts, args):
         raise NotImplementedError
@@ -204,7 +215,7 @@ class RadixTree(object):
             return node.segment
         else:
             #data leaf
-            data = node[0] if self.debug else node
+            data = node
             return '%d %s' % (len(self.segments) + self.data_offsets[data], node)
 
     def dump(self):
@@ -237,8 +248,8 @@ class RadixTree(object):
             logging.warning('too many segments for final segment record size!')
 
         for node in self.segments:
-            f.write(self.serialize_node(node.lhs))
-            f.write(self.serialize_node(node.rhs))
+            f.write(self.serialize_node(node.child[0]))
+            f.write(self.serialize_node(node.child[1]))
 
         f.write(b'\x2a') #So long, and thanks for all the fish!
         f.write(''.join(self.data_segments).encode())
@@ -406,8 +417,8 @@ class CountryRadixTree(RadixTree):
 
     def serialize(self, f):
         for node in self.segments:
-            f.write(self.serialize_node(node.lhs))
-            f.write(self.serialize_node(node.rhs))
+            f.write(self.serialize_node(node.child[0]))
+            f.write(self.serialize_node(node.child[1]))
 
         f.write(chr(0x00) * 3)
         f.write('csv2dat.py') #.dat file comment - can be anything
