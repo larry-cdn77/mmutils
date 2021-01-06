@@ -56,7 +56,7 @@ _geo_default = {
     'region_code': u'',
     'time_zone': u''
 }
-_geo_str_keys = set(k for k,v in _geo_default.iteritems() if v == u'')
+_geo_str_keys = set(k for k,v in _geo_default.items() if v == u'')
 
 IpGeo = namedtuple('IpGeo', sorted(_geo_default))
 ipgeo_default = IpGeo(**_geo_default)
@@ -88,7 +88,7 @@ def get_asn(ip):
         rec = _gia.org_by_addr(ip)
         asn, asname = rec.split(' ', 1)
         return IpAsn(int(asn[2:]), asname.decode('latin1'))
-    except Exception, e:
+    except Exception:
         return ipasn_default
 
 

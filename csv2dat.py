@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import sys
 import logging
 import logging.handlers
@@ -38,7 +38,7 @@ def parse_args(argv):
     p = optparse.OptionParser()
 
     cmdlist = []
-    for cmd, (f, usage) in sorted(cmds.iteritems()):
+    for cmd, (f, usage) in sorted(cmds.items()):
         cmdlist.append('%-8s\t%%prog %s' % (cmd, usage))
     cmdlist = '\n  '.join(cmdlist)
 
@@ -66,7 +66,7 @@ def test_dbs(opts, args):
     gi_tst = pygeoip.GeoIP(tst_file, pygeoip.MEMORY_CACHE)
     dbtype = gi_ref._databaseType
     if gi_ref._databaseType != gi_tst._databaseType:
-        print "error: database types don't match"
+        print("error: database types don't match")
         exit(1)
 
     if opts.geoip:
@@ -97,7 +97,7 @@ def test_dbs(opts, args):
         get_ref = gi_ref.country_code_by_addr
         get_tst = gi_tst.country_code_by_addr
     else:
-        print "error: unknown database type"
+        print("error: unknown database type")
         exit(1)
 
     ok = bad = 0
@@ -106,11 +106,11 @@ def test_dbs(opts, args):
         ref = get_ref(ip)
         tst = get_tst(ip)
         if not isequal(ref, tst):
-            print ip, ref, tst
+            print(ip, ref, tst)
             bad += 1
         else:
             ok += 1
-    print 'ok:', ok, 'bad:', bad
+    print('ok:', ok, 'bad:', bad)
 test_dbs.usage = 'test reference.dat test.dat ips.txt'
 
 
@@ -209,7 +209,7 @@ class RadixTree(object):
 
     def dump(self):
         for node in self.segments:
-            print node.segment, [self.dump_node(node.lhs), self.dump_node(node.rhs)]
+            print(node.segment, [self.dump_node(node.child[0]), self.dump_node(node.child[1])])
 
     def encode(self, *args):
         raise NotImplementedError
@@ -240,12 +240,13 @@ class RadixTree(object):
             f.write(self.serialize_node(node.lhs))
             f.write(self.serialize_node(node.rhs))
 
-        f.write(chr(42)) #So long, and thanks for all the fish!
-        f.write(''.join(self.data_segments))
+        f.write(b'\x2a') #So long, and thanks for all the fish!
+        f.write(''.join(self.data_segments).encode())
 
-        f.write('csv2dat.py') #.dat file comment - can be anything
-        f.write(chr(0xFF) * 3)
-        f.write(chr(self.edition))
+        f.write(b'csv2dat.py') #.dat file comment - can be anything
+        f.write(b'\xff\xff\xff')
+        f.write(chr(self.edition).encode())
+        print('len(segments) %d' % len(self.segments))
         f.write(self.encode_rec(len(self.segments), self.segreclen))
 
 
@@ -445,8 +446,8 @@ def build_dat(RTree, opts, args):
         r.serialize(f)
 
     tstop = time.time()
-    print 'wrote %d-node trie with %d networks (%d distinct labels) in %d seconds' % (
-            len(r.segments), r.netcount, len(r.data_offsets), tstop - tstart)
+    print('wrote %d-node trie with %d networks (%d distinct labels) in %d seconds' % (
+            len(r.segments), r.netcount, len(r.data_offsets), tstop - tstart))
 
 
 rtrees = [
