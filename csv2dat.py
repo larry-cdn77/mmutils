@@ -323,7 +323,7 @@ class ASNv6RadixTree(ASNRadixTree):
     segreclen = pygeoip.const.SEGMENT_RECORD_LENGTH
 
     def gen_nets(self, opts, args):
-        for _, _, lo, hi, asn in gen_csv(fileinput.input(args)):
+        for lo, hi, asn in gen_csv(fileinput.input(args)):
             lo, hi = ipaddr.IPAddress(int(lo)), ipaddr.IPAddress(int(hi))
             nets = ipaddr.summarize_address_range(lo, hi)
             yield nets, (asn,)
