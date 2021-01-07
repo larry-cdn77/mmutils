@@ -292,7 +292,6 @@ class RadixTree(object):
         f.write(b'csv2dat.py') #.dat file comment - can be anything
         f.write(b'\xff\xff\xff')
         f.write(chr(self.edition).encode())
-        print('len(segments) %d' % len(self.segments))
         f.write(self.encode_rec(len(self.segments), self.segreclen))
 
 
