@@ -12,7 +12,7 @@ import time
 
 from functools import partial
 
-import ipaddr
+import ipaddress
 import pygeoip
 
 cc_idx = dict((cc.lower(), i) for i,cc in enumerate(pygeoip.const.COUNTRY_CODES))
@@ -158,7 +158,7 @@ class RadixTree(object):
 
     def __setitem__(self, net, data):
         self.netcount += 1
-        inet = int(net)
+        inet = int(net[0])
         node = self.segments[0]
         for depth in range(self.seek_depth, self.seek_depth - (net.prefixlen-1), -1):
             if inet & (1 << depth):
@@ -260,8 +260,8 @@ class ASNRadixTree(RadixTree):
 
     def gen_nets(self, opts, args):
         for lo, hi, asn in gen_csv(fileinput.input(args)):
-            lo, hi = ipaddr.IPAddress(int(lo)), ipaddr.IPAddress(int(hi))
-            nets = ipaddr.summarize_address_range(lo, hi)
+            lo, hi = ipaddress.ip_address(int(lo)), ipaddress.ip_address(int(hi))
+            nets = ipaddress.summarize_address_range(lo, hi)
             yield nets, (asn,)
 
     def encode(self, data):
@@ -278,8 +278,8 @@ class ASNv6RadixTree(ASNRadixTree):
 
     def gen_nets(self, opts, args):
         for _, _, lo, hi, asn in gen_csv(fileinput.input(args)):
-            lo, hi = ipaddr.IPAddress(int(lo)), ipaddr.IPAddress(int(hi))
-            nets = ipaddr.summarize_address_range(lo, hi)
+            lo, hi = ipaddress.ip_address(int(lo)), ipaddress.ip_address(int(hi))
+            nets = ipaddress.summarize_address_range(lo, hi)
             yield nets, (asn,)
 
 
@@ -319,8 +319,8 @@ class CityRev1RadixTree(RadixTree):
             loc = row[2:]
             if id_loc:
                 loc = id_loc[loc[0]]
-            lo, hi = ipaddr.IPAddress(int(lo)), ipaddr.IPAddress(int(hi))
-            nets = ipaddr.summarize_address_range(lo, hi)
+            lo, hi = ipaddress.ip_address(int(lo)), ipaddress.ip_address(int(hi))
+            nets = ipaddress.summarize_address_range(lo, hi)
             yield nets, tuple(loc)
 
     def encode(self, country, region, city, postal_code, lat, lon, metro_code, area_code):
@@ -359,8 +359,8 @@ class CityRev1v6RadixTree(CityRev1RadixTree):
     def gen_nets(self, opts, args):
         for row in gen_csv(fileinput.input(args)):
             lo, hi = row[2:4]
-            lo, hi = ipaddr.IPAddress(int(lo)), ipaddr.IPAddress(int(hi))
-            nets = ipaddr.summarize_address_range(lo, hi)
+            lo, hi = ipaddress.ip_address(int(lo)), ipaddress.ip_address(int(hi))
+            nets = ipaddress.summarize_address_range(lo, hi)
             #v6 postal_code is after lat/lon instead of before like v4
             country, region, city, lat, lon, postal_code, metro_code, area_code = row[4:]
             yield nets, (country, region, city, postal_code, lat, lon, metro_code, area_code)
@@ -376,8 +376,8 @@ class CountryRadixTree(RadixTree):
 
     def gen_nets(self, opts, args):
         for _, _, lo, hi, cc, _ in gen_csv(fileinput.input(args)):
-            lo, hi = ipaddr.IPAddress(int(lo)), ipaddr.IPAddress(int(hi))
-            nets = ipaddr.summarize_address_range(lo, hi)
+            lo, hi = ipaddress.ip_address(int(lo)), ipaddress.ip_address(int(hi))
+            nets = ipaddress.summarize_address_range(lo, hi)
             yield nets, (cc,)
 
     def encode(self, cc):
@@ -428,8 +428,8 @@ class Countryv6RadixTree(CountryRadixTree):
         for row in gen_csv(fileinput.input(args)):
             #handle weird space before quote problems
             lo, hi, cc = [x.strip(' "') for x in row[2:5]]
-            lo, hi = ipaddr.IPAddress(int(lo)), ipaddr.IPAddress(int(hi))
-            nets = ipaddr.summarize_address_range(lo, hi)
+            lo, hi = ipaddress.ip_address(int(lo)), ipaddress.ip_address(int(hi))
+            nets = ipaddress.summarize_address_range(lo, hi)
             yield nets, (cc,)
 
 
